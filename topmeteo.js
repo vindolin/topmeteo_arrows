@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Topmeteo Arrows
 // @namespace    http://tampermonkey.net/
-// @version      0.6.4
+// @version      0.6.6
 // @description  Add Meteo-Parapente style arrows to the table!
 // @author       Thomas Schüßler
 // @match        https://*.topmeteo.eu/*/*/loc/*
@@ -29,15 +29,16 @@
     const min_arrow_head_width = 3.0;
     const max_arrow_head_width = 7.0;
 
+    // only upscale
+    const scale = window.devicePixelRatio > 1 ? window.devicePixelRatio : 1;
+
     function draw_arrow(size, angle, strength) {
         let canvas = document.createElement('canvas');
-        let ctx = canvas.getContext('2d');
-        canvas.height = size;
-        canvas.width = size;
 
         let hue = hsl_end - map(strength, min_strength, max_strength, hsl_start, hsl_end);
-
         let color = `hsl(${hue}, 100%, 45%)`;
+
+        let ctx = canvas.getContext('2d');
 
         ctx.strokeStyle = color;
         ctx.fillStyle = color;
@@ -58,7 +59,7 @@
         // draw arrow head
         ctx.beginPath();
         ctx.moveTo(size / 2, size);
-        ctx.lineTo(size / arrow_head_width , size - size / 2.5);
+        ctx.lineTo(size / arrow_head_width, size - size / 2.5);
         ctx.lineTo(size - size / arrow_head_width, size - size / 2.5);
         ctx.fill();
 
@@ -80,7 +81,7 @@
     let work_heights = [];
 
     for(let span of document.querySelectorAll('span.product-title-txt')) {
-        if(span.innerText.match(/^(Arbeitshöhe|Usable height|Altitude utilisable)/)) {
+        if(span.innerText.match(/^(Cumulus Basis|Cumulus base|Base Cumulus)/)) {
             let tr = span.parentElement.parentElement;
             let tds = Array.from(tr.querySelectorAll('td'));
             let td_count = tds.length - 1;
@@ -108,13 +109,20 @@
                 let strength_kmh = strength_to_kmh(parseInt(strength), unit);
 
                 let canvas = document.createElement('canvas');
-                canvas.width = canvas_width;
-                canvas.height = canvas_height;
+                canvas.width = canvas_width * scale;
+                canvas.height = canvas_height * scale;
                 canvas.title = `${angle}°`;
 
                 let ctx = canvas.getContext('2d');
-                let arrow_canvas = draw_arrow(arrow_size, angle, strength_kmh);
+
+
+                let arrow_canvas = draw_arrow(arrow_size * scale, angle, strength_kmh);
+
                 ctx.drawImage(arrow_canvas, 0, 0);
+
+                if(scale != 1) {
+                    ctx.scale(scale, scale);
+                }
 
                 // wind strength
                 ctx.font = '12px Arial, Helvetica, sans-serif';
@@ -123,6 +131,10 @@
                 // replace the irritating text content with our shiny new arrows
                 let td_span = td.querySelector('span');
                 td.style.padding = '0';
+
+                canvas.style.width = `${canvas_width}px`;
+                canvas.style.height = `${canvas_height}px`;
+
                 if(wind_height <= work_heights[i]) {
                     canvas.style.backgroundColor = usable_height_background_color;
                 }
