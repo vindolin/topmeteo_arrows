@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Topmeteo Arrows
 // @namespace    http://tampermonkey.net/
-// @version      0.6.6
+// @version      0.6.7
 // @description  Add Meteo-Parapente style arrows to the table!
 // @author       Thomas Schüßler
 // @match        https://*.topmeteo.eu/*/*/loc/*
@@ -44,6 +44,9 @@
         ctx.fillStyle = color;
         ctx.lineWidth = strength / 4;
 
+        // limit arrow width to be smaller than the arrow head
+        if(ctx.lineWidth > max_strength / 3) ctx.lineWidth = max_strength / 3;
+
         // rotate around center
         ctx.translate(size / 2, size / 2);
         let angle_rad = angle * Math.PI / 180;
@@ -78,16 +81,30 @@
     }
 
     let wind_pattern = /(\d+)°\/(\d+)/; // 275°/33
-    let work_heights = [];
+    let thermal_heights = [];
 
     for(let span of document.querySelectorAll('span.product-title-txt')) {
+
+        // use usable height for the yellow height markers
+        if(span.innerText.match(/^(Arbeitshöhe|Usable height|Altitude utilisable)/)) {
+            let tr = span.parentElement.parentElement;
+            let tds = Array.from(tr.querySelectorAll('td'));
+            let td_count = tds.length - 1;
+
+            for(let [i, td] of tds.slice(1, td_count + 1).entries()) {
+                thermal_heights[i] = parseInt(td.innerText);
+            }
+        }
+
+        // overwrite with cumulus base if there are clouds
         if(span.innerText.match(/^(Cumulus Basis|Cumulus base|Base Cumulus)/)) {
             let tr = span.parentElement.parentElement;
             let tds = Array.from(tr.querySelectorAll('td'));
             let td_count = tds.length - 1;
 
             for(let [i, td] of tds.slice(1, td_count + 1).entries()) {
-                work_heights[i] = parseInt(td.innerText);
+                let cloud_base = parseInt(td.innerText);
+                if(cloud_base) thermal_heights[i] = cloud_base;
             }
         }
 
@@ -135,7 +152,7 @@
                 canvas.style.width = `${canvas_width}px`;
                 canvas.style.height = `${canvas_height}px`;
 
-                if(wind_height <= work_heights[i]) {
+                if(wind_height <= thermal_heights[i]) {
                     canvas.style.backgroundColor = usable_height_background_color;
                 }
                 td.replaceChild(canvas, td_span);
