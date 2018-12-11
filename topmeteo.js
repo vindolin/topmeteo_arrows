@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Topmeteo Arrows
 // @namespace    http://tampermonkey.net/
-// @version      0.6.7
+// @version      0.6.8
 // @description  Add Meteo-Parapente style arrows to the table!
 // @author       Thomas Schüßler
 // @match        https://*.topmeteo.eu/*/*/loc/*
@@ -37,6 +37,10 @@
 
         let hue = hsl_end - map(strength, min_strength, max_strength, hsl_start, hsl_end);
         let color = `hsl(${hue}, 100%, 45%)`;
+
+        if(strength >= max_strength) {
+            color = `hsl(${hsl_end - hsl_end}, 100%, 45%)`;
+        }
 
         let ctx = canvas.getContext('2d');
 
