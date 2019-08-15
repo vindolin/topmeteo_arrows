@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Topmeteo Arrows
 // @namespace    http://tampermonkey.net/
-// @version      0.6.8
+// @version      0.7.0
 // @description  Add Meteo-Parapente style arrows to the table!
 // @author       Thomas Schüßler
 // @match        https://*.topmeteo.eu/*/*/loc/*
@@ -87,80 +87,129 @@
     let wind_pattern = /(\d+)°\/(\d+)/; // 275°/33
     let thermal_heights = [];
 
-    for(let span of document.querySelectorAll('span.product-title-txt')) {
+    function apply_arrows() {
 
-        // use usable height for the yellow height markers
-        if(span.innerText.match(/^(Arbeitshöhe|Usable height|Altitude utilisable)/)) {
-            let tr = span.parentElement.parentElement;
-            let tds = Array.from(tr.querySelectorAll('td'));
-            let td_count = tds.length - 1;
+        for(let span of document.querySelectorAll('span.product-title-txt')) {
 
-            for(let [i, td] of tds.slice(1, td_count + 1).entries()) {
-                thermal_heights[i] = parseInt(td.innerText);
+            // use usable height for the yellow height markers
+            if(span.innerText.match(/^(Arbeitshöhe|Usable height|Altitude utilisable)/)) {
+                let tr = span.parentElement.parentElement;
+                let tds = Array.from(tr.querySelectorAll('td'));
+                let td_count = tds.length - 1;
+
+                for(let [i, td] of tds.slice(1, td_count + 1).entries()) {
+                    thermal_heights[i] = parseInt(td.innerText);
+                }
             }
-        }
 
-        // overwrite with cumulus base if there are clouds
-        if(span.innerText.match(/^(Cumulus Basis|Cumulus base|Base Cumulus)/)) {
-            let tr = span.parentElement.parentElement;
-            let tds = Array.from(tr.querySelectorAll('td'));
-            let td_count = tds.length - 1;
+            // overwrite with cumulus base if there are clouds
+            if(span.innerText.match(/^(Cumulus Basis|Cumulus base|Base Cumulus)/)) {
+                let tr = span.parentElement.parentElement;
+                let tds = Array.from(tr.querySelectorAll('td'));
+                let td_count = tds.length - 1;
 
-            for(let [i, td] of tds.slice(1, td_count + 1).entries()) {
-                let cloud_base = parseInt(td.innerText);
-                if(cloud_base) thermal_heights[i] = cloud_base;
+                for(let [i, td] of tds.slice(1, td_count + 1).entries()) {
+                    let cloud_base = parseInt(td.innerText);
+                    if(cloud_base) thermal_heights[i] = cloud_base;
+                }
             }
-        }
 
-        let match = null;
-        if(match = span.innerText.match(/(?:Wind|Vent)\s+(\d+).+\[(.+)\]/)) { // Wind 2600m ISA [km/h]
-            let [, wind_height, unit] = match;
+            let match = null;
 
-            let tr = span.parentElement.parentElement;
-            let tds = Array.from(tr.querySelectorAll('td'));
-            let td_count = tds.length - 1;
+            if(match = span.innerText.match(/(?:Wind|Vent)\s+(\d+).+\[(.+)\]/)) { // Wind 2600m ISA [km/h]
+                let [, wind_height, unit] = match;
 
-            // iterate over the td's, ignore the first one with text
-            for(let [i, td] of tds.slice(1, td_count + 1).entries()) {
+                let tr = span.parentElement.parentElement;
+                let tds = Array.from(tr.querySelectorAll('td'));
+                let td_count = tds.length - 1;
 
-                let td_text = td.innerText.trim();
-                let [, angle, strength] = wind_pattern.exec(td_text);
+                // iterate over the td's, ignore the first one with text
+                for(let [i, td] of tds.slice(1, td_count + 1).entries()) {
 
-                angle = parseInt(angle);
-                let strength_kmh = strength_to_kmh(parseInt(strength), unit);
+                    let td_text = td.innerText.trim();
+                    let [, angle, strength] = wind_pattern.exec(td_text);
 
-                let canvas = document.createElement('canvas');
-                canvas.width = canvas_width * scale;
-                canvas.height = canvas_height * scale;
-                canvas.title = `${angle}°`;
+                    angle = parseInt(angle);
+                    let strength_kmh = strength_to_kmh(parseInt(strength), unit);
 
-                let ctx = canvas.getContext('2d');
+                    let canvas = document.createElement('canvas');
+                    canvas.width = canvas_width * scale;
+                    canvas.height = canvas_height * scale;
+                    canvas.title = `${angle}°`;
+
+                    let ctx = canvas.getContext('2d');
 
 
-                let arrow_canvas = draw_arrow(arrow_size * scale, angle, strength_kmh);
+                    let arrow_canvas = draw_arrow(arrow_size * scale, angle, strength_kmh);
 
-                ctx.drawImage(arrow_canvas, 0, 0);
+                    ctx.drawImage(arrow_canvas, 0, 0);
 
-                if(scale != 1) {
-                    ctx.scale(scale, scale);
+                    if(scale != 1) {
+                        ctx.scale(scale, scale);
+                    }
+
+                    // wind strength
+                    ctx.font = '12px Arial, Helvetica, sans-serif';
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 1)';
+                    ctx.lineWidth = 4;
+                    ctx.textAlign = 'right';
+                    ctx.strokeText(strength, canvas_width, 20);
+                    ctx.fillStyle = 'rgba(0, 0, 0, 1)';
+                    ctx.fillText(strength, canvas_width, 20);
+
+                    // replace the irritating text content with our shiny new arrows
+                    let td_span = td.querySelector('span');
+
+                    canvas.style.width = `${canvas_width}px`;
+                    canvas.style.height = `${canvas_height}px`;
+
+                    if(wind_height <= thermal_heights[i]) {
+                        canvas.style.backgroundColor = usable_height_background_color;
+                    }
+
+                    let old_arrow = td.querySelector('canvas');
+
+                    // Hide the old span with text so that the next Ajax request still can find and modify it.
+                    td_span.style.overflow = 'hidden';
+                    td_span.style.width = '0px';
+                    td_span.style.height = '0px';
+
+                    if(old_arrow) { // replace the old arrow on next draws
+                        td.replaceChild(canvas, old_arrow);
+                    } else {  // first draw, just append
+                        td.appendChild(canvas);
+                    }
+
                 }
 
-                // wind strength
-                ctx.font = '12px Arial, Helvetica, sans-serif';
-                ctx.fillText(strength, 22, 15);
-
-                // replace the irritating text content with our shiny new arrows
-                let td_span = td.querySelector('span');
-                td.style.padding = '0';
-
-                canvas.style.width = `${canvas_width}px`;
-                canvas.style.height = `${canvas_height}px`;
-
-                if(wind_height <= thermal_heights[i]) {
-                    canvas.style.backgroundColor = usable_height_background_color;
-                }
-                td.replaceChild(canvas, td_span);
             }
+
         }
+
     }
+
+    let config = {
+        childList: true,
+        subtree: true
+    }
+
+    let observed_target = document.querySelector('div#forecast-table table.responsive');
+
+    let observer = new MutationObserver(function(mutations, observer_) {
+        // something changed in the table!
+
+        // because we mutate the table ourselve, first stop the observer
+        observer_.disconnect();
+
+        // draw our pretty arrows
+        apply_arrows();
+
+        // and resume observing
+        observer.observe(observed_target, config);
+    });
+
+    observer.observe(observed_target, config);
+
+    // no Ajax on first load, just parse the page
+    apply_arrows();
 }
