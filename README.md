@@ -1,6 +1,6 @@
 # topmeteo_arrows
 
-This browser addon replaces the textual values on the TopMeteo site forecast with colored arrows à la MeteoParapente.
+This browser addon replaces the textual values on the TopMeteo site forecast with human readable, colored arrows à la MeteoParapente.
 
 ![Screenshot](https://raw.githubusercontent.com/vindolin/topmeteo_arrows/master/screenshot.png)
 
