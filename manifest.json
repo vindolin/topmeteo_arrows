@@ -1,8 +1,8 @@
 {
 
-  "manifest_version": 2,
+  "manifest_version": 3,
   "name": "TopMeteo Arrows",
-  "version": "0.7.0",
+  "version": "0.7.1",
 
   "description": "Meteo-Parapente style colored arrows for TopMeteo.",
 
