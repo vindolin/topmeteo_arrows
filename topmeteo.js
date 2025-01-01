@@ -36,7 +36,7 @@
         let hue = hsl_end - map(strength, min_strength, max_strength, hsl_start, hsl_end);
         let color = `hsl(${hue}, 100%, 45%)`;
         if(strength >= max_strength) {
-            color = `hsl(${hsl_end - hsl_end}, 100%, 45%)`;
+            color = `hsl(${hsl_start}, 100%, 45%)`;
         }
         return color;
     }
@@ -53,7 +53,8 @@
         ctx.translate(-size / 2, -size / 2);
 
         let tail_width = ctx.lineWidth;
-        let tail_height = size - size / 3;
+        let arrow_head_length = map(strength, min_strength, max_strength, size / 4, size / 2);
+        let tail_height = size - arrow_head_length;
         let arrow_head_width = map(strength, min_strength, max_strength, min_arrow_head_width, max_arrow_head_width);
 
         // draw the arrow
@@ -61,16 +62,15 @@
         ctx.moveTo(size / 2 - tail_width / 2, 0);
         ctx.lineTo(size / 2 + tail_width / 2, 0);
         ctx.lineTo(size / 2 + tail_width / 2, tail_height);
-        ctx.lineTo(size - size / arrow_head_width, size - size / 3);
+        ctx.lineTo(size - size / arrow_head_width, size - arrow_head_length);
         ctx.lineTo(size / 2, size);
-        ctx.lineTo(size / arrow_head_width, size - size / 3);
+        ctx.lineTo(size / arrow_head_width, size - arrow_head_length);
         ctx.lineTo(size / 2 - tail_width / 2, tail_height);
         ctx.closePath();
         ctx.fill();
-        ctx.lineWidth = 1;
+        ctx.lineWidth = 0.5;
         ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
         ctx.stroke();
-
         return canvas;
     }
 
@@ -79,7 +79,7 @@
         if(unit == 'km/h') {
             return strength;
         } else if(unit == 'kt') {
-            return strength / 0.53995680345572;
+            return strength * 1.852;
         } else if(unit == 'm/s') {
             return strength * 18 / 5;
         }
@@ -143,11 +143,11 @@
 
                     let arrow_canvas = draw_arrow(arrow_size * scale, angle, strength_kmh);
 
-                    ctx.drawImage(arrow_canvas, 0, 0);
-
                     if(scale != 1) {
                         ctx.scale(scale, scale);
                     }
+
+                    ctx.drawImage(arrow_canvas, 0, 0);
 
                     // wind strength
                     ctx.font = '12px Arial, Helvetica, sans-serif';
@@ -199,7 +199,7 @@
     let observer = new MutationObserver(function(mutations, observer_) {
         // something changed in the table!
 
-        // because we mutate the table ourselve, first stop the observer
+        // because we mutate the table ourselves, first stop the observer
         observer_.disconnect();
 
         // draw our pretty arrows
