@@ -32,43 +32,44 @@
     // only upscale
     const scale = window.devicePixelRatio > 1 ? window.devicePixelRatio : 1;
 
-    function draw_arrow(size, angle, strength) {
-        let canvas = document.createElement('canvas');
-
+    function getArrowColor(strength) {
         let hue = hsl_end - map(strength, min_strength, max_strength, hsl_start, hsl_end);
         let color = `hsl(${hue}, 100%, 45%)`;
-
         if(strength >= max_strength) {
             color = `hsl(${hsl_end - hsl_end}, 100%, 45%)`;
         }
+        return color;
+    }
 
+    function draw_arrow(size, angle, strength) {
+        let canvas = document.createElement('canvas');
         let ctx = canvas.getContext('2d');
 
-        ctx.strokeStyle = color;
-        ctx.fillStyle = color;
-        ctx.lineWidth = strength / 4;
+        ctx.fillStyle = getArrowColor(strength);
+        ctx.lineWidth = Math.min(strength / 4, max_strength / 3);
 
-        // limit arrow width to be smaller than the arrow head
-        if(ctx.lineWidth > max_strength / 3) ctx.lineWidth = max_strength / 3;
-
-        // rotate around center
         ctx.translate(size / 2, size / 2);
-        let angle_rad = angle * Math.PI / 180;
-        ctx.rotate(angle_rad);
-        ctx.translate(- size / 2, - size / 2);
+        ctx.rotate(angle * Math.PI / 180);
+        ctx.translate(-size / 2, -size / 2);
 
-        ctx.moveTo(size / 2, 0);
-        ctx.lineTo(size / 2, size - size / 3);
-        ctx.stroke();
-
+        let tail_width = ctx.lineWidth;
+        let tail_height = size - size / 3;
         let arrow_head_width = map(strength, min_strength, max_strength, min_arrow_head_width, max_arrow_head_width);
 
-        // draw arrow head
+        // draw the arrow
         ctx.beginPath();
-        ctx.moveTo(size / 2, size);
-        ctx.lineTo(size / arrow_head_width, size - size / 2.5);
-        ctx.lineTo(size - size / arrow_head_width, size - size / 2.5);
+        ctx.moveTo(size / 2 - tail_width / 2, 0);
+        ctx.lineTo(size / 2 + tail_width / 2, 0);
+        ctx.lineTo(size / 2 + tail_width / 2, tail_height);
+        ctx.lineTo(size - size / arrow_head_width, size - size / 3);
+        ctx.lineTo(size / 2, size);
+        ctx.lineTo(size / arrow_head_width, size - size / 3);
+        ctx.lineTo(size / 2 - tail_width / 2, tail_height);
+        ctx.closePath();
         ctx.fill();
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.stroke();
 
         return canvas;
     }
