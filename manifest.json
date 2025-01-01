@@ -2,7 +2,7 @@
 
   "manifest_version": 3,
   "name": "TopMeteo Arrows",
-  "version": "0.7.3",
+  "version": "0.7.4",
 
   "description": "Meteo-Parapente style colored arrows for TopMeteo.",
 
@@ -17,6 +17,12 @@
       "matches": ["*://*.topmeteo.eu/*/*/loc/*"],
       "js": ["topmeteo.js"]
     }
-  ]
+  ],
+
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "{3a160040-a3bf-4096-9e85-8e71f033e060}"
+    }
+  }
 
 }
