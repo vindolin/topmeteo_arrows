@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Topmeteo Arrows
 // @namespace    http://tampermonkey.net/
-// @version      0.7.3
+// @version      0.7.4
 // @description  Add Meteo-Parapente style arrows to the table!
 // @author       Thomas Schüßler
 // @match        https://*.topmeteo.eu/*/*/loc/*
