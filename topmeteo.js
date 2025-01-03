@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Topmeteo Arrows
 // @namespace    http://tampermonkey.net/
-// @version      0.7.4
+// @version      0.8.0
 // @description  Add Meteo-Parapente style arrows to the table!
 // @author       Thomas Schüßler
 // @match        https://*.topmeteo.eu/*/*/loc/*
@@ -15,62 +15,111 @@
         return (num - inMin) * (outMax - outMin) / (inMax - inMin) + outMin;
     }
 
-    const usableHeightBackgroundColor = '#FFFFAA';
-    const hslStart = 0;
-    const hslEnd = 183; // 183 = green
-    const minStrength = 0;
-    const maxStrength = 40; // km/h
+    // copied from https://stackoverflow.com/a/70049899
+    class LinearGradientHelper {
+        static WIDTH = 101; // 0..100
+        static HEIGHT = 1;
 
-    const arrowSize = 20;
-    const canvasWidth = 37;
-    const canvasHeight = 20;
+        context = null;
+
+        constructor(gradientColors) { // [ [color, % ie 0, 0.5, 1], [ ... ], ... ]
+            // Canvas
+            const canvas = document.createElement('canvas');
+            canvas.width = LinearGradientHelper.WIDTH;
+            canvas.height = LinearGradientHelper.HEIGHT;
+
+            this.context = canvas.getContext("2d", { willReadFrequently: true });
+
+            // Gradient
+            const gradient = this.context.createLinearGradient(0, 0, LinearGradientHelper.WIDTH, 0); // x0, y0, x1, y1
+
+            gradientColors.forEach(val => {
+                gradient.addColorStop(val[1], val[0]);
+            });
+
+            // Fill with gradient
+            this.context.fillStyle = gradient;
+            this.context.fillRect(0, 0, LinearGradientHelper.WIDTH, LinearGradientHelper.HEIGHT); // x, y, width, height
+        }
+
+        getColor(percent) // percent [0..100]
+        {
+            const color = this.context.getImageData(parseInt(percent), 0, 1, 1); // x, y, width, height
+            const rgba = color.data;
+
+            return `rgb(${rgba[0]}, ${rgba[1]}, ${rgba[2]})`;
+        }
+    }
+
+    const grad = new LinearGradientHelper([
+        ['#00FFEAFF', 0],
+        ['#00FF22FF', .2],
+        ['#FFE602FF', .25],
+        ['#FF0000FF', .5],
+        ['#53005AFF', .6],
+        ['#53005AFF', 1],
+    ]);
+
+    const canvasWidth = 50;
+    const canvasHeight = 30;
+
+    const usableHeightBackgroundColor = '#FFFFAA';
+
+    const maxWindForColor = 100; // km/h
+
+    const minWindForSizing = 2;
+    const maxWindForSizing = 40; // km/h
+
+    const arrowSize = 15;
 
     // relative to size
-    const minArrowHeadWidth = 3.0;
-    const maxArrowHeadWidth = 7.0;
+    const minArrowHeadWidth = 2.0;
+    const maxArrowHeadWidth = 5.0;
 
     // only upscale
     const scale = window.devicePixelRatio > 1 ? window.devicePixelRatio : 1;
 
     function getArrowColor(strength) {
-        let hue = hslEnd - map(strength, minStrength, maxStrength, hslStart, hslEnd);
-        let color = `hsl(${hue}, 100%, 45%)`;
-        if (strength >= maxStrength) {
-            color = `hsl(${hslStart}, 100%, 45%)`;
-        }
-        return color;
+        return grad.getColor(Math.min(maxWindForColor, strength));
     }
 
     function drawArrow(size, angle, strength) {
-        let canvas = document.createElement('canvas');
-        let ctx = canvas.getContext('2d');
+        // angle = 0;
+        // strength = 60;
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
 
         ctx.fillStyle = getArrowColor(strength);
-        ctx.lineWidth = Math.min(strength / 4, maxStrength / 3);
 
         ctx.translate(size / 2, size / 2);
         ctx.rotate(angle * Math.PI / 180);
         ctx.translate(-size / 2, -size / 2);
 
-        let tailWidth = ctx.lineWidth;
-        let arrowHeadLength = map(strength, minStrength, maxStrength, size / 4, size / 2);
-        let tailHeight = size - arrowHeadLength;
-        let arrowHeadWidth = map(strength, minStrength, maxStrength, minArrowHeadWidth, maxArrowHeadWidth);
+        const arrowHeadLength = map(strength, minWindForSizing, maxWindForSizing, size / 3, size / 2);
+        const arrowHeadWidth = map(strength, minWindForSizing, maxWindForSizing, minArrowHeadWidth, maxArrowHeadWidth);
+        const arrowTailWidth = size / 4 * strength / maxWindForSizing;
+        const arrowTailLength = size - arrowHeadLength;
 
-        // draw the arrow
+        // draw the arrow from top to bottom
         ctx.beginPath();
-        ctx.moveTo(size / 2 - tailWidth / 2, 0);
-        ctx.lineTo(size / 2 + tailWidth / 2, 0);
-        ctx.lineTo(size / 2 + tailWidth / 2, tailHeight);
+
+        ctx.moveTo(size / 2 - arrowTailWidth / 2, 0);
+        ctx.lineTo(size / 2 + arrowTailWidth / 2, 0);
+        ctx.lineTo(size / 2 + arrowTailWidth / 2, arrowTailLength);
         ctx.lineTo(size - size / arrowHeadWidth, size - arrowHeadLength);
         ctx.lineTo(size / 2, size);
         ctx.lineTo(size / arrowHeadWidth, size - arrowHeadLength);
-        ctx.lineTo(size / 2 - tailWidth / 2, tailHeight);
+        ctx.lineTo(size / 2 - arrowTailWidth / 2, arrowTailLength);
+
         ctx.closePath();
-        ctx.fill();
+
+        // outline
         ctx.lineWidth = 0.5;
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.strokeStyle = 'black';
         ctx.stroke();
+
+        ctx.fill();
+
         return canvas;
     }
 
@@ -85,81 +134,84 @@
         }
     }
 
-    let windPattern = /(\d+)°\/(\d+)/; // 275°/33
+    const windPattern = /(\d+)°\/(\d+)/; // 275°/33
     let thermalHeights = [];
 
     function applyArrows() {
 
-        for (let span of document.querySelectorAll('span.product-title-txt')) {
+        for (const span of document.querySelectorAll('span.product-title-txt')) {
 
             // use usable height for the yellow height markers
             if (span.innerText.match(/^(Arbeitshöhe|Usable height|Altitude utilisable)/)) {
-                let tr = span.parentElement.parentElement;
-                let tds = Array.from(tr.querySelectorAll('td'));
-                let tdCount = tds.length - 1;
+                const tr = span.parentElement.parentElement;
+                const tds = Array.from(tr.querySelectorAll('td'));
+                const tdCount = tds.length - 1;
 
-                for (let [i, td] of tds.slice(1, tdCount + 1).entries()) {
+                for (const [i, td] of tds.slice(1, tdCount + 1).entries()) {
                     thermalHeights[i] = parseInt(td.innerText);
                 }
             }
 
             // overwrite with cumulus base if there are clouds
             if (span.innerText.match(/^(Cumulus Basis|Cumulus base|Base Cumulus)/)) {
-                let tr = span.parentElement.parentElement;
-                let tds = Array.from(tr.querySelectorAll('td'));
-                let tdCount = tds.length - 1;
+                const tr = span.parentElement.parentElement;
+                const tds = Array.from(tr.querySelectorAll('td'));
+                const tdCount = tds.length - 1;
 
-                for (let [i, td] of tds.slice(1, tdCount + 1).entries()) {
-                    let cloudBaseHeight = parseInt(td.innerText);
+                for (const [i, td] of tds.slice(1, tdCount + 1).entries()) {
+                    const cloudBaseHeight = parseInt(td.innerText);
                     if (cloudBaseHeight) thermalHeights[i] = cloudBaseHeight;
                 }
             }
 
-            let match = null;
+            let match;
 
             if (match = span.innerText.match(/(?:Wind|Vent)\s+(\d+).+\[(.+)\]/)) { // Wind 2600m ISA [km/h]
-                let [, windHeight, unit] = match;
+                const [, windHeight, unit] = match;
 
-                let tr = span.parentElement.parentElement;
-                let tds = Array.from(tr.querySelectorAll('td'));
-                let tdCount = tds.length - 1;
+                const tr = span.parentElement.parentElement;
+                const tds = Array.from(tr.querySelectorAll('td'));
+                const tdCount = tds.length - 1;
 
                 // iterate over the td's, ignore the first one with text
-                for (let [i, td] of tds.slice(1, tdCount + 1).entries()) {
+                for (const [i, td] of tds.slice(1, tdCount + 1).entries()) {
 
-                    let tdText = td.innerText.trim();
+                    const tdText = td.innerText.trim();
                     let [, angle, strength] = windPattern.exec(tdText);
 
                     angle = parseInt(angle);
-                    let strengthKmh = strengthToKmh(parseInt(strength), unit);
+                    const strengthKmh = strengthToKmh(parseInt(strength), unit);
 
-                    let canvas = document.createElement('canvas');
+                    const canvas = document.createElement('canvas');
                     canvas.width = canvasWidth * scale;
                     canvas.height = canvasHeight * scale;
                     canvas.title = `${angle}°`;
 
-                    let ctx = canvas.getContext('2d');
+                    const ctx = canvas.getContext('2d');
 
 
-                    let arrowCanvas = drawArrow(arrowSize * scale, angle, strengthKmh);
+                    const arrowCanvas = drawArrow(arrowSize * scale, angle, strengthKmh);
 
                     if (scale != 1) {
                         ctx.scale(scale, scale);
                     }
 
-                    ctx.drawImage(arrowCanvas, 0, 0);
+                    ctx.drawImage(arrowCanvas, canvasWidth * 0.25, 0);
 
                     // wind strength
-                    ctx.font = '12px Arial, Helvetica, sans-serif';
-                    ctx.strokeStyle = 'rgba(255, 255, 255, 1)';
-                    ctx.lineWidth = 4;
+                    const textSize = 10;
+                    const outlineWidth = 4;
+                    ctx.font = `${textSize}px Arial, Helvetica, sans-serif`;
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+                    ctx.lineWidth = outlineWidth;
                     ctx.textAlign = 'right';
-                    ctx.strokeText(strength, canvasWidth, 20);
+                    const textY = canvasHeight / 2 + textSize / 2;
+                    ctx.strokeText(strength, canvasWidth, textY);
                     ctx.fillStyle = 'rgba(0, 0, 0, 1)';
-                    ctx.fillText(strength, canvasWidth, 20);
+                    ctx.fillText(strength, canvasWidth, textY);
 
                     // replace the irritating text content with our shiny new arrows
-                    let tdSpan = td.querySelector('span');
+                    const tdSpan = td.querySelector('span');
 
                     canvas.style.width = `${canvasWidth}px`;
                     canvas.style.height = `${canvasHeight}px`;
@@ -168,7 +220,7 @@
                         canvas.style.backgroundColor = usableHeightBackgroundColor;
                     }
 
-                    let oldArrow = td.querySelector('canvas');
+                    const oldArrow = td.querySelector('canvas');
 
                     // Hide the old span with text so that the next Ajax request still can find and modify it.
                     tdSpan.style.overflow = 'hidden';
@@ -189,14 +241,14 @@
 
     }
 
-    let config = {
+    const config = {
         childList: true,
         subtree: true
     }
 
-    let observedTarget = document.querySelector('div#forecast-table table.responsive');
+    const observedTarget = document.querySelector('div#forecast-table table.responsive');
 
-    let observer = new MutationObserver(function (mutations, observer_) {
+    const observer = new MutationObserver(function (mutations, observer_) {
         // something changed in the table!
 
         // because we mutate the table ourselves, first stop the observer
