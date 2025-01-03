@@ -103,13 +103,13 @@
         // draw the arrow from top to bottom
         ctx.beginPath();
 
-        ctx.moveTo(size / 2 - arrowTailWidth / 2, 0);
-        ctx.lineTo(size / 2 + arrowTailWidth / 2, 0);
-        ctx.lineTo(size / 2 + arrowTailWidth / 2, arrowTailLength);
-        ctx.lineTo(size - size / arrowHeadWidth, size - arrowHeadLength);
-        ctx.lineTo(size / 2, size);
-        ctx.lineTo(size / arrowHeadWidth, size - arrowHeadLength);
-        ctx.lineTo(size / 2 - arrowTailWidth / 2, arrowTailLength);
+        ctx.moveTo(size / 2 - arrowTailWidth / 2, 0); // tail end left
+        ctx.lineTo(size / 2 + arrowTailWidth / 2, 0); // tail end right
+        ctx.lineTo(size / 2 + arrowTailWidth / 2, arrowTailLength);  // tail start right
+        ctx.lineTo(size - size / arrowHeadWidth, size - arrowHeadLength); // head right
+        ctx.lineTo(size / 2, size); // arrow tip
+        ctx.lineTo(size / arrowHeadWidth, size - arrowHeadLength); // head left
+        ctx.lineTo(size / 2 - arrowTailWidth / 2, arrowTailLength); // tail start left
 
         ctx.closePath();
 
