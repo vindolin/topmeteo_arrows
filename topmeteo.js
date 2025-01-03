@@ -80,7 +80,7 @@
     const scale = window.devicePixelRatio > 1 ? window.devicePixelRatio : 1;
 
     function getArrowColor(strength) {
-        return grad.getColor(Math.min(maxWindForColor, strength));
+        return grad.getColor(Math.min(maxWindForColor, strength) / maxWindForColor * 100);
     }
 
     function drawArrow(size, angle, strength) {
@@ -97,7 +97,7 @@
 
         const arrowHeadLength = map(strength, minWindForSizing, maxWindForSizing, size / 3, size / 2);
         const arrowHeadWidth = map(strength, minWindForSizing, maxWindForSizing, minArrowHeadWidth, maxArrowHeadWidth);
-        const arrowTailWidth = size / 4 * strength / maxWindForSizing;
+        const arrowTailWidth = (size / 4) * (strength / maxWindForSizing);
         const arrowTailLength = size - arrowHeadLength;
 
         // draw the arrow from top to bottom
