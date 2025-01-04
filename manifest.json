@@ -2,7 +2,7 @@
 
   "manifest_version": 3,
   "name": "TopMeteo Arrows",
-  "version": "0.7.5",
+  "version": "0.8.0",
 
   "description": "Meteo-Parapente style colored arrows for TopMeteo.",
   "homepage_url": "https://github.com/vindolin/topmeteo_arrows",
