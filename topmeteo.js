@@ -11,9 +11,9 @@
 {
     'use strict';
 
-    function map(value, inMin, inMax, outMin, outMax, clamp = true, exponent = 2) {
+    function mapQuadratic(value, inMin, inMax, outMin, outMax, clamp = true) {
         const t = (value - inMin) / (inMax - inMin);
-        let mapResult = outMin + (outMax - outMin) * Math.pow(t, exponent);
+        let mapResult = outMin + (outMax - outMin) * (t * t); // quadratic rise
         if (clamp) {
             mapResult = Math.max(Math.min(mapResult, Math.max(outMin, outMax)), Math.min(outMin, outMax));
         }
@@ -57,6 +57,7 @@
 
     const grad = new LinearGradientHelper([
         ['#00FFEA', 0],
+        ['#008F13', .15],
         ['#00FF22', .2],
         ['#FFE602', .25],
         ['#FF0000', .5],
@@ -80,8 +81,8 @@
         return grad.getColor(Math.min(maxWindForColor, strength) / maxWindForColor * 100);
     }
 
-    const minWindForSizing = 5;
-    const maxWindForSizing = 40; // km/h
+    const minWindForSizing = 3;
+    const maxWindForSizing = 60; // km/h
 
     function drawArrow(size, angle, windSpeed) {
         // angle = 180;
@@ -99,24 +100,21 @@
         ctx.rotate(angle * Math.PI / 180);
         ctx.translate(-size / 2, -size / 2);
 
-        const arrowLength = map(windSpeed, minWindForSizing, maxWindForSizing, size * 0.6, size, true, 2.5);
-
         const minArrowHeadWidth = 2.5;
         const maxArrowHeadWidth = size * 0.7;
+        const arrowHeadWidth = mapQuadratic(windSpeed, minWindForSizing, maxWindForSizing, minArrowHeadWidth, maxArrowHeadWidth);
 
-        const arrowHeadWidth = map(windSpeed, minWindForSizing, maxWindForSizing, minArrowHeadWidth, maxArrowHeadWidth, true, 3.5);
-
-        const minArrowTailWidth = 1;
+        const minArrowTailWidth = 2;
         const maxArrowTailWidth = size * 0.6;
+        const arrowTailWidth = mapQuadratic(windSpeed, minWindForSizing, maxWindForSizing, minArrowTailWidth, maxArrowTailWidth);
 
-        const arrowTailWidth = map(windSpeed, minWindForSizing, maxWindForSizing, minArrowTailWidth, maxArrowTailWidth, true, 3);
-
-        const minArrowHeadLength = size * 0.01;
-        const maxArrowHeadLength = size * 0.8;
-
-        const arrowHeadLength = map(windSpeed, minWindForSizing, maxWindForSizing, minArrowHeadLength, maxArrowHeadLength, true, 2.5);
+        const minArrowHeadLength = size * 0.07;
+        const maxArrowHeadLength = size * 0.6;
+        const arrowHeadLength = mapQuadratic(windSpeed, minWindForSizing, maxWindForSizing, minArrowHeadLength, maxArrowHeadLength);
 
         const arrowTailLength = size - arrowHeadLength;
+
+        const arrowLength = mapQuadratic(windSpeed, minWindForSizing, maxWindForSizing, size * 0.6, size);
 
         const lengthOffset = (size - arrowLength) / 2;
 
