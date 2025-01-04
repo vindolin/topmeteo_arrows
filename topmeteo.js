@@ -100,24 +100,22 @@
         ctx.rotate(angle * Math.PI / 180);
         ctx.translate(-size / 2, -size / 2);
 
-        const exponent = 2.5;
-
-        const arrowLength = map(windSpeed, minWindForSizing, maxWindForSizing, size * 0.6, size, true, exponent);
+        const arrowLength = map(windSpeed, minWindForSizing, maxWindForSizing, size * 0.6, size, true, 2.5);
 
         const minArrowHeadWidth = 3.0;
         const maxArrowHeadWidth = size * 0.7;
 
-        const arrowHeadWidth = map(windSpeed, minWindForSizing, maxWindForSizing, minArrowHeadWidth, maxArrowHeadWidth, true, exponent);
+        const arrowHeadWidth = map(windSpeed, minWindForSizing, maxWindForSizing, minArrowHeadWidth, maxArrowHeadWidth, true, 3);
 
         const minArrowTailWidth = 1;
         const maxArrowTailWidth = size * 0.6;
 
-        const arrowTailWidth = map(windSpeed, minWindForSizing, maxWindForSizing, minArrowTailWidth, maxArrowTailWidth, true, exponent);
+        const arrowTailWidth = map(windSpeed, minWindForSizing, maxWindForSizing, minArrowTailWidth, maxArrowTailWidth, true, 2.5);
 
         const minArrowHeadLength = size * 0.01;
-        const maxArrowHeadLength = size * 0.7;
+        const maxArrowHeadLength = size * 0.8;
 
-        const arrowHeadLength = map(windSpeed, minWindForSizing, maxWindForSizing, minArrowHeadLength, maxArrowHeadLength, true, exponent);
+        const arrowHeadLength = map(windSpeed, minWindForSizing, maxWindForSizing, minArrowHeadLength, maxArrowHeadLength, true, 2.5);
 
         const arrowTailLength = size - arrowHeadLength;
 
