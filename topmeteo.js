@@ -101,7 +101,7 @@
         ctx.rotate(angle * Math.PI / 180);
         ctx.translate(-size / 2, -size / 2);
 
-        const minArrowHeadWidth = 2.5;
+        const minArrowHeadWidth = 2.8;
         const maxArrowHeadWidth = size * 0.7;
         const arrowHeadWidth = mapQuadratic(windSpeed, minWindForSizing, maxWindForSizing, minArrowHeadWidth, maxArrowHeadWidth);
 
