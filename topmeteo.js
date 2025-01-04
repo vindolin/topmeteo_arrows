@@ -71,7 +71,7 @@
 
     const maxWindForColor = 100; // km/h
 
-    const arrowSize = 20;
+    const arrowSize = 18;
 
     // only upscale  // TODO this doesn't work in windows with the high dpi setting
     // const scale = window.devicePixelRatio > 1 ? window.devicePixelRatio : 1;
