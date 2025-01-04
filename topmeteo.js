@@ -64,17 +64,18 @@
         ['#940057', .6],
     ]);
 
-    const canvasWidth = 35;
+    const canvasWidth = 30;
     const canvasHeight = 30;
 
     const usableHeightBackgroundColor = '#FFFFAA';
 
     const maxWindForColor = 100; // km/h
 
-    const arrowSize = 25;
+    const arrowSize = 20;
 
-    // only upscale
-    const scale = window.devicePixelRatio > 1 ? window.devicePixelRatio : 1;
+    // only upscale  // TODO this doesn't work in windows with the high dpi setting
+    // const scale = window.devicePixelRatio > 1 ? window.devicePixelRatio : 1;
+    const scale = 1;
     console.log(scale);
 
     function getArrowColor(strength) {
@@ -212,13 +213,11 @@
                     const ctx = canvas.getContext('2d');
 
 
-                    const arrowCanvas = drawArrow(arrowSize * scale, angle, strengthKmh);
-
                     if (scale != 1) {
                         ctx.scale(scale, scale);
                     }
 
-                    ctx.drawImage(arrowCanvas, 0, 0);
+                    ctx.drawImage(drawArrow(arrowSize * scale, angle, strengthKmh), 0, 0);
 
                     // wind strength
                     const textSize = 10;
