@@ -56,12 +56,11 @@
     }
 
     const grad = new LinearGradientHelper([
-        ['#00FFEAFF', 0],
-        ['#00FF22FF', .2],
-        ['#FFE602FF', .25],
-        ['#FF0000FF', .5],
-        ['#53005AFF', .6],
-        ['#53005AFF', 1],
+        ['#00FFEA', 0],
+        ['#00FF22', .2],
+        ['#FFE602', .25],
+        ['#FF0000', .5],
+        ['#940057', .6],
     ]);
 
     const canvasWidth = 35;
@@ -102,15 +101,15 @@
 
         const arrowLength = map(windSpeed, minWindForSizing, maxWindForSizing, size * 0.6, size, true, 2.5);
 
-        const minArrowHeadWidth = 3.0;
+        const minArrowHeadWidth = 2.5;
         const maxArrowHeadWidth = size * 0.7;
 
-        const arrowHeadWidth = map(windSpeed, minWindForSizing, maxWindForSizing, minArrowHeadWidth, maxArrowHeadWidth, true, 3);
+        const arrowHeadWidth = map(windSpeed, minWindForSizing, maxWindForSizing, minArrowHeadWidth, maxArrowHeadWidth, true, 3.5);
 
         const minArrowTailWidth = 1;
         const maxArrowTailWidth = size * 0.6;
 
-        const arrowTailWidth = map(windSpeed, minWindForSizing, maxWindForSizing, minArrowTailWidth, maxArrowTailWidth, true, 2.5);
+        const arrowTailWidth = map(windSpeed, minWindForSizing, maxWindForSizing, minArrowTailWidth, maxArrowTailWidth, true, 3);
 
         const minArrowHeadLength = size * 0.01;
         const maxArrowHeadLength = size * 0.8;
