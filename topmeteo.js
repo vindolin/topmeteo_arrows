@@ -251,6 +251,7 @@
                     tdSpan.style.overflow = 'hidden';
                     tdSpan.style.width = '0px';
                     tdSpan.style.height = '0px';
+                    td.style.padding = '0px';
 
                     if (oldArrow) { // replace the old arrow on next draws
                         td.replaceChild(canvas, oldArrow);
