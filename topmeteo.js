@@ -11,10 +11,14 @@
 {
     'use strict';
 
-    function map(num, inMin, inMax, outMin, outMax) {
-        return (num - inMin) * (outMax - outMin) / (inMax - inMin) + outMin;
-    }
+    function map(value, inMin, inMax, outMin, outMax, clamp) {
+        const mapResult = (value - inMin) * (outMax - outMin) / (inMax - inMin) + outMin;
+        if (clamp) {
+            return Math.max(Math.min(mapResult, Math.max(outMin, outMax)), Math.min(outMin, outMax));
+        }
 
+        return mapResult;
+    }
     // copied from https://stackoverflow.com/a/70049899
     class LinearGradientHelper {
         static WIDTH = 101; // 0..100
@@ -42,8 +46,8 @@
             this.context.fillRect(0, 0, LinearGradientHelper.WIDTH, LinearGradientHelper.HEIGHT); // x, y, width, height
         }
 
-        getColor(percent) // percent [0..100]
-        {
+        // percent [0..100]
+        getColor(percent) {
             const color = this.context.getImageData(parseInt(percent), 0, 1, 1); // x, y, width, height
             const rgba = color.data;
 
@@ -60,56 +64,76 @@
         ['#53005AFF', 1],
     ]);
 
-    const canvasWidth = 50;
+    const canvasWidth = 35;
     const canvasHeight = 30;
 
     const usableHeightBackgroundColor = '#FFFFAA';
 
     const maxWindForColor = 100; // km/h
 
-    const minWindForSizing = 2;
-    const maxWindForSizing = 40; // km/h
-
-    const arrowSize = 15;
-
-    // relative to size
-    const minArrowHeadWidth = 2.0;
-    const maxArrowHeadWidth = 5.0;
+    const arrowSize = 25;
 
     // only upscale
     const scale = window.devicePixelRatio > 1 ? window.devicePixelRatio : 1;
+    console.log(scale);
 
     function getArrowColor(strength) {
         return grad.getColor(Math.min(maxWindForColor, strength) / maxWindForColor * 100);
     }
 
-    function drawArrow(size, angle, strength) {
-        // angle = 0;
-        // strength = 60;
+    const minWindForSizing = 5;
+    const maxWindForSizing = 40; // km/h
+
+    function drawArrow(size, angle, windSpeed) {
+        // angle = 180;
+        // windSpeed = 5;
         const canvas = document.createElement('canvas');
+
         const ctx = canvas.getContext('2d');
 
-        ctx.fillStyle = getArrowColor(strength);
+        ctx.fillStyle = getArrowColor(windSpeed);
 
-        ctx.translate(size / 2, size / 2);
+        // if the arrow is rotated, we need to make space for it to not be clipped at the edges
+        const spaceForRotation = size * 0.1;  // <- insert your fancy math here
+
+        ctx.translate(size / 2 + spaceForRotation, size / 2 + spaceForRotation);
         ctx.rotate(angle * Math.PI / 180);
         ctx.translate(-size / 2, -size / 2);
 
-        const arrowHeadLength = map(strength, minWindForSizing, maxWindForSizing, size / 3, size / 2);
-        const arrowHeadWidth = map(strength, minWindForSizing, maxWindForSizing, minArrowHeadWidth, maxArrowHeadWidth);
-        const arrowTailWidth = (size / 4) * (strength / maxWindForSizing);
+        const arrowLength = map(windSpeed, minWindForSizing, maxWindForSizing, size * 0.6, size, true);
+
+        const minArrowHeadWidth = 3.0;
+        const maxArrowHeadWidth = size * 0.7;
+
+        const arrowHeadWidth = map(windSpeed, minWindForSizing, maxWindForSizing, minArrowHeadWidth, maxArrowHeadWidth, true);
+
+        const minArrowTailWidth = 1;
+        const maxArrowTailWidth = size * 0.6;
+
+        const arrowTailWidth = map(windSpeed, minWindForSizing, maxWindForSizing, minArrowTailWidth, maxArrowTailWidth, true);
+
+        const minArrowHeadLength = size * 0.01;
+        const maxArrowHeadLength = size * 0.7;
+
+        const arrowHeadLength = map(windSpeed, minWindForSizing, maxWindForSizing, minArrowHeadLength, maxArrowHeadLength, true);
+
         const arrowTailLength = size - arrowHeadLength;
 
+        const lengthOffset = (size - arrowLength) / 2;
+
         // draw the arrow from top to bottom
+        const sizeHalf = size / 2;
+        const arrowTailWidthHalf = arrowTailWidth / 2;
+
         ctx.beginPath();
 
-        ctx.moveTo(size / 2 - arrowTailWidth / 2, 0); // tail end left
-        ctx.lineTo(size / 2 + arrowTailWidth / 2, 0); // tail end right
-        ctx.lineTo(size / 2 + arrowTailWidth / 2, arrowTailLength);  // tail start right
-        ctx.lineTo(size - size / arrowHeadWidth, size - arrowHeadLength); // head right
-        ctx.lineTo(size / 2, size); // arrow tip
-        ctx.lineTo(size / arrowHeadWidth, size - arrowHeadLength); // head left
-        ctx.lineTo(size / 2 - arrowTailWidth / 2, arrowTailLength); // tail start left
+        ctx.moveTo(sizeHalf - arrowTailWidthHalf, lengthOffset); // tail end left
+        ctx.lineTo(sizeHalf + arrowTailWidthHalf, lengthOffset); // tail end right
+        ctx.lineTo(sizeHalf + arrowTailWidthHalf, arrowTailLength - lengthOffset);  // tail start right (where the tail meets the head)
+        ctx.lineTo(size - (size / arrowHeadWidth), size - lengthOffset - arrowHeadLength); // head right
+        ctx.lineTo(sizeHalf, size); // arrow tip
+        ctx.lineTo(size / arrowHeadWidth, size - lengthOffset - arrowHeadLength); // head left
+        ctx.lineTo(sizeHalf - arrowTailWidthHalf, arrowTailLength - lengthOffset); // tail start left
 
         ctx.closePath();
 
@@ -137,6 +161,7 @@
     const windPattern = /(\d+)°\/(\d+)/; // 275°/33
     let thermalHeights = [];
 
+    // replace the text in the table cells with canvas arrows
     function applyArrows() {
 
         for (const span of document.querySelectorAll('span.product-title-txt')) {
@@ -164,9 +189,9 @@
                 }
             }
 
-            let match;
+            const match = span.innerText.match(/(?:Wind|Vent)\s+(\d+).+\[(.+)\]/);
 
-            if (match = span.innerText.match(/(?:Wind|Vent)\s+(\d+).+\[(.+)\]/)) { // Wind 2600m ISA [km/h]
+            if (match) { // Wind 2600m ISA [km/h]
                 const [, windHeight, unit] = match;
 
                 const tr = span.parentElement.parentElement;
@@ -196,7 +221,7 @@
                         ctx.scale(scale, scale);
                     }
 
-                    ctx.drawImage(arrowCanvas, canvasWidth * 0.25, 0);
+                    ctx.drawImage(arrowCanvas, 0, 0);
 
                     // wind strength
                     const textSize = 10;
@@ -205,7 +230,7 @@
                     ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
                     ctx.lineWidth = outlineWidth;
                     ctx.textAlign = 'right';
-                    const textY = canvasHeight / 2 + textSize / 2;
+                    const textY = canvasHeight - textSize / 2;
                     ctx.strokeText(strength, canvasWidth, textY);
                     ctx.fillStyle = 'rgba(0, 0, 0, 1)';
                     ctx.fillText(strength, canvasWidth, textY);
@@ -232,13 +257,9 @@
                     } else {  // first draw, just append
                         td.appendChild(canvas);
                     }
-
                 }
-
             }
-
         }
-
     }
 
     const config = {
@@ -246,6 +267,7 @@
         subtree: true
     }
 
+    // observe the table for changes when the user changes the day
     const observedTarget = document.querySelector('div#forecast-table table.responsive');
 
     const observer = new MutationObserver(function (mutations, observer_) {
